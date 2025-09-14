@@ -1,0 +1,185 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Railway-themed color palette */
+  --background: #ffffff;
+  --foreground: #002e5d;
+  --card: #f0f4f8;
+  --card-foreground: #002e5d;
+  --popover: #ffffff;
+  --popover-foreground: #002e5d;
+  --primary: #002e5d;
+  --primary-foreground: #ffffff;
+  --secondary: #ff6f20;
+  --secondary-foreground: #ffffff;
+  --muted: #d1e2f9;
+  --muted-foreground: #002e5d;
+  --accent: #ff6f20;
+  --accent-foreground: #ffffff;
+  --destructive: #e63946;
+  --destructive-foreground: #ffffff;
+  --border: #d1e2f9;
+  --input: #f0f4f8;
+  --ring: rgba(255, 111, 32, 0.3);
+  --chart-1: #002e5d;
+  --chart-2: #ff6f20;
+  --chart-3: #d1e2f9;
+  --chart-4: #f0f4f8;
+  --chart-5: #ffffff;
+  --radius: 0.5rem;
+  --sidebar: #f0f4f8;
+  --sidebar-foreground: #002e5d;
+  --sidebar-primary: #002e5d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ff6f20;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #d1e2f9;
+  --sidebar-ring: rgba(255, 111, 32, 0.3);
+}
+
+.dark {
+  --background: #002e5d;
+  --foreground: #ffffff;
+  --card: #1a365d;
+  --card-foreground: #ffffff;
+  --popover: #1a365d;
+  --popover-foreground: #ffffff;
+  --primary: #ffffff;
+  --primary-foreground: #002e5d;
+  --secondary: #ff6f20;
+  --secondary-foreground: #ffffff;
+  --muted: #2d3748;
+  --muted-foreground: #a0aec0;
+  --accent: #ff6f20;
+  --accent-foreground: #ffffff;
+  --destructive: #e63946;
+  --destructive-foreground: #ffffff;
+  --border: #2d3748;
+  --input: #2d3748;
+  --ring: rgba(255, 111, 32, 0.3);
+  --chart-1: #ffffff;
+  --chart-2: #ff6f20;
+  --chart-3: #4a90e2;
+  --chart-4: #2d3748;
+  --chart-5: #a0aec0;
+  --sidebar: #1a365d;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #002e5d;
+  --sidebar-accent: #ff6f20;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2d3748;
+  --sidebar-ring: rgba(255, 111, 32, 0.3);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom animations for railway dashboard */
+@keyframes train-move {
+  0% {
+    transform: translateX(-10px);
+  }
+  50% {
+    transform: translateX(10px);
+  }
+  100% {
+    transform: translateX(-10px);
+  }
+}
+
+@keyframes pulse-alert {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.train-animation {
+  animation: train-move 3s ease-in-out infinite;
+}
+
+.alert-pulse {
+  animation: pulse-alert 2s ease-in-out infinite;
+}
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Custom Leaflet marker styles */
+.custom-train-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}
+
+/* Fix for Leaflet marker icons */
+.leaflet-default-icon-path {
+  background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png');
+}

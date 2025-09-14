@@ -1,0 +1,3043 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "RailRadar API",
+    "description": "**Live train tracking and railway information API for Indian Railways**\n\nAccess comprehensive train and station data including:\n- Real-time train tracking and status\n- Complete train schedules and routes\n- Station information and live boards\n- Train search and discovery\n- Historical delay analytics\n\n## Authentication\n\nAll API endpoints require authentication using an API key.\n\n### Getting Your API Key\n1. **Sign up**: Create a free account at [railradar.in/signup](https://railradar.in/signup)\n2. **Get API Key**: Your API key will be automatically generated upon registration\n3. **Manage Usage**: View usage statistics and regenerate keys at [railradar.in/dashboard](https://railradar.in/dashboard)\n\n### Using Your API Key\nInclude your API key in the `x-api-key` header with every request:\n```bash\ncurl -H \"x-api-key: YOUR_API_KEY\" \"https://railradar.in/api/v1/stations/all-kvs\"\n```\n\n### Rate Limits\n- **Free Plan**: 5,000 requests per month\n- **Enterprise Plan**: Unlimited requests (contact support)\n- Rate limit headers are included in all responses\n- Exceeding limits returns HTTP 429 (Too Many Requests)\n\n## Base URL\nAll API requests should be made to: `https://railradar.in/api/v1`\n",
+    "version": "1.0.0",
+    "contact": {
+      "name": "RailRadar Support",
+      "url": "https://railradar.in"
+    },
+    "license": {
+      "name": "Commercial License",
+      "url": "https://railradar.in/license"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://railradar.in/api/v1",
+      "description": "Production API Server"
+    },
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Development API Server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/trains/list": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get paginated train list",
+        "description": "Retrieves a paginated list of trains with filtering and search capabilities.\nSupports filtering by train type, railway zone, and text search across\ntrain numbers, names, and station codes.\n",
+        "operationId": "getTrainList",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (1-based)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of items per page (1-100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "example": 50
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter by train type (case-insensitive)",
+            "schema": {
+              "type": "string",
+              "example": "Express"
+            }
+          },
+          {
+            "name": "zone",
+            "in": "query",
+            "description": "Filter by railway zone (case-insensitive)",
+            "schema": {
+              "type": "string",
+              "example": "WR"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search in train number, name, or station codes",
+            "schema": {
+              "type": "string",
+              "example": "rajdhani"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train list retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TrainListResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/{trainNumber}": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get comprehensive train data",
+        "description": "Retrieves comprehensive information about a specific train including static details,\nschedule, and optionally live tracking data.\n\n**Data Types:**\n- `full`: Complete train data with live information (default)\n- `static`: Only database information without live data\n- `live`: Only live tracking information wrapped in { liveData: ... }\n",
+        "operationId": "getTrainData",
+        "parameters": [
+          {
+            "name": "trainNumber",
+            "in": "path",
+            "required": true,
+            "description": "5-digit train number",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "example": "12301"
+            }
+          },
+          {
+            "name": "journeyDate",
+            "in": "query",
+            "description": "Journey date in YYYY-MM-DD format",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2025-01-08"
+            }
+          },
+          {
+            "name": "dataType",
+            "in": "query",
+            "description": "Type of data to retrieve",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "full",
+                "static",
+                "live"
+              ],
+              "default": "full"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "description": "Data provider for live information",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "railradar",
+                "NTES"
+              ],
+              "default": "railradar"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "User ID for tracking (optional)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/TrainData"
+                            },
+                            {
+                              "$ref": "#/components/schemas/Train"
+                            },
+                            {
+                              "$ref": "#/components/schemas/LiveTrainStatus"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "liveData": {
+                                  "oneOf": [
+                                    {
+                                      "$ref": "#/components/schemas/LiveTrainStatus"
+                                    },
+                                    {
+                                      "$ref": "#/components/schemas/TrainData"
+                                    },
+                                    {
+                                      "$ref": "#/components/schemas/Train"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/{trainNumber}/schedule": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get train schedule",
+        "description": "Retrieves the detailed schedule/route for a specific train on a given journey date",
+        "operationId": "getTrainSchedule",
+        "parameters": [
+          {
+            "name": "trainNumber",
+            "in": "path",
+            "required": true,
+            "description": "5-digit train number",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "example": "12301"
+            }
+          },
+          {
+            "name": "journeyDate",
+            "in": "query",
+            "required": true,
+            "description": "Journey date in YYYY-MM-DD format",
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2025-01-08"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train schedule retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/TrainScheduleResult"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/{trainNumber}/instances": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get train journey instances",
+        "description": "Retrieves past and future journey instances for a specific train. The response format depends on the selected provider.",
+        "operationId": "getTrainInstances",
+        "parameters": [
+          {
+            "name": "trainNumber",
+            "in": "path",
+            "required": true,
+            "description": "5-digit train number",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "example": "12301"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "description": "Data provider for live information",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "railradar",
+                "NTES"
+              ],
+              "default": "railradar"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train instances retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/JourneyInstance"
+                              }
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/RailRadarTrainJourneyInstance"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/{trainNumber}/average-delay": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get train average delay",
+        "description": "Retrieves average delay information for a specific train at various stations",
+        "operationId": "getTrainAverageDelay",
+        "parameters": [
+          {
+            "name": "trainNumber",
+            "in": "path",
+            "required": true,
+            "description": "5-digit train number",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "example": "12301"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average delay data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/AverageDelayResult"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/all-kvs": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get all trains key-value pairs",
+        "description": "Retrieves a list of all train numbers and names as key-value pairs",
+        "operationId": "getAllTrainKVs",
+        "responses": {
+          "200": {
+            "description": "Train key-value pairs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/KeyValue"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/between": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Find trains between stations",
+        "description": "Finds all trains that run between two specified stations",
+        "operationId": "getTrainsBetweenStations",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "description": "Source station code (1-10 characters, automatically converted to uppercase)",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10,
+              "example": "NDLS"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "description": "Destination station code (1-10 characters, automatically converted to uppercase)",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10,
+              "example": "HWH"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trains between stations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TrainWithIntermediateStops"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/trains/live-map": {
+      "get": {
+        "tags": [
+          "Trains"
+        ],
+        "summary": "Get live train map data",
+        "description": "Retrieves real-time position data for all currently running trains",
+        "operationId": "getLiveTrainMapData",
+        "responses": {
+          "200": {
+            "description": "Live train map data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/LiveTrainMapData"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/resources": {
+      "get": {
+        "tags": [
+          "Resources"
+        ],
+        "summary": "Get resource data",
+        "description": "Retrieves resource information like train types and railway zones.\nUseful for populating filter dropdowns and understanding available options.\n",
+        "operationId": "getResources",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "query",
+            "description": "Type of resource to retrieve",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "train-types",
+                "train-zones",
+                "all"
+              ],
+              "default": "all",
+              "example": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resources retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ResourcesResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/stations/{stationCode}/info": {
+      "get": {
+        "tags": [
+          "Stations"
+        ],
+        "summary": "Get station information",
+        "description": "Retrieves static information about a specific station",
+        "operationId": "getStationInfo",
+        "parameters": [
+          {
+            "name": "stationCode",
+            "in": "path",
+            "required": true,
+            "description": "Station code (1-10 characters, automatically converted to uppercase)",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10,
+              "example": "NDLS"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Station"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/stations/{stationCode}/live": {
+      "get": {
+        "tags": [
+          "Stations"
+        ],
+        "summary": "Get live station board",
+        "description": "Retrieves real-time departure and arrival information for a specific station",
+        "operationId": "getLiveStationBoard",
+        "parameters": [
+          {
+            "name": "stationCode",
+            "in": "path",
+            "required": true,
+            "description": "Station code (1-10 characters, automatically converted to uppercase)",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10,
+              "example": "NDLS"
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "description": "Number of hours to look ahead (1-8)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 8,
+              "default": 8
+            }
+          },
+          {
+            "name": "toStationCode",
+            "in": "query",
+            "description": "Filter trains going to specific destination station (automatically converted to uppercase)",
+            "schema": {
+              "type": "string",
+              "maxLength": 10,
+              "example": "HWH"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live station board retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/LiveStationBoardResult"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/stations/all-kvs": {
+      "get": {
+        "tags": [
+          "Stations"
+        ],
+        "summary": "Get all stations key-value pairs",
+        "description": "Retrieves a list of all station codes and names as key-value pairs",
+        "operationId": "getAllStationKVs",
+        "responses": {
+          "200": {
+            "description": "Station key-value pairs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/KeyValue"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/search/trains": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Search trains",
+        "description": "Search for trains by number or name",
+        "operationId": "searchTrains",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "Search query (train number or name)",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "rajdhani"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train search results retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/TrainSearchResult"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/search/stations": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Search stations",
+        "description": "Search for stations by code or name",
+        "operationId": "searchStations",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "Search query (station code or name)",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "delhi"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "description": "Data provider for search",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "railradar",
+                "NTES"
+              ],
+              "default": "railradar"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Station search results retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Station"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/cron/incremental-refresh": {
+      "get": {
+        "tags": [
+          "Internal"
+        ],
+        "summary": "Get incremental refresh API info",
+        "description": "Provides information about the incremental refresh API (internal use only)",
+        "operationId": "getIncrementalRefreshInfo",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Incremental refresh API info retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Incremental Refresh API (CPU-Optimized)"
+                    },
+                    "description": {
+                      "type": "string",
+                      "example": "Processes trains in small chunks to prevent server freezing"
+                    },
+                    "endpoints": {
+                      "type": "object",
+                      "properties": {
+                        "POST": {
+                          "type": "object",
+                          "properties": {
+                            "description": {
+                              "type": "string",
+                              "example": "Run incremental refresh with chunked processing"
+                            },
+                            "url": {
+                              "type": "string",
+                              "example": "/api/v1/cron/incremental-refresh"
+                            },
+                            "note": {
+                              "type": "string",
+                              "example": "Internal use only - no authentication required"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Internal"
+        ],
+        "summary": "Trigger incremental refresh",
+        "description": "Triggers an incremental refresh of train data (internal use only)",
+        "operationId": "triggerIncrementalRefresh",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Incremental refresh triggered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncrementalRefreshResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/cron/update-train": {
+      "get": {
+        "tags": [
+          "Internal"
+        ],
+        "summary": "Get update train API info",
+        "description": "Provides information on how to update a specific train in the database (internal use only)",
+        "operationId": "getUpdateTrainInfo",
+        "security": [],
+        "parameters": [
+          {
+            "name": "trainNumber",
+            "in": "query",
+            "required": false,
+            "description": "An example train number to display in the usage instructions",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "example": "12301"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Update train API info retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Update a specific train in the database."
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "example": "POST"
+                        },
+                        "url": {
+                          "type": "string",
+                          "example": "/api/v1/cron/update-train?trainNumber=<trainNumber>"
+                        },
+                        "body": {
+                          "type": "null"
+                        },
+                        "example": {
+                          "type": "string",
+                          "example": "/api/v1/cron/update-train?trainNumber=12049"
+                        }
+                      }
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "properties": {
+                        "trainNumber": {
+                          "type": "string",
+                          "example": "12301"
+                        }
+                      }
+                    },
+                    "note": {
+                      "type": "string",
+                      "example": "Internal use only - no authentication required"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Internal"
+        ],
+        "summary": "Update a specific train",
+        "description": "Updates the data for a single, specified train (internal use only)",
+        "operationId": "updateSpecificTrain",
+        "security": [],
+        "parameters": [
+          {
+            "name": "trainNumber",
+            "in": "query",
+            "required": true,
+            "description": "The 5-digit number of the train to update",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}$",
+              "example": "12301"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Train 12301 updated successfully."
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "trainNumber": {
+                          "type": "string",
+                          "example": "12301"
+                        },
+                        "timeTaken": {
+                          "type": "string",
+                          "example": "2.5s"
+                        },
+                        "successful": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": [
+                            "12301"
+                          ]
+                        },
+                        "failed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "example": []
+                        },
+                        "totalProcessed": {
+                          "type": "integer",
+                          "example": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/openapi": {
+      "get": {
+        "tags": [
+          "Documentation"
+        ],
+        "summary": "Get OpenAPI specification",
+        "description": "Retrieves the OpenAPI specification in YAML format",
+        "operationId": "getOpenApiSpec",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification retrieved successfully",
+            "content": {
+              "application/x-yaml": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key for authentication. Get your free API key by signing up at railradar.in/signup.\nInclude this header in all requests: `x-api-key: YOUR_API_KEY`\n"
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request - Invalid input parameters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "example": "VALIDATION:INVALID_INPUT"
+                        },
+                        "message": {
+                          "example": "Invalid input parameters"
+                        },
+                        "statusCode": {
+                          "example": 400
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - Missing or invalid authentication",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "example": "AUTH:UNAUTHENTICATED"
+                        },
+                        "message": {
+                          "example": "API key required. Get your free API key at https://railradar.in/signup"
+                        },
+                        "statusCode": {
+                          "example": 401
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not found - Requested resource does not exist",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "example": "API:NOT_FOUND"
+                        },
+                        "message": {
+                          "example": "Requested resource not found"
+                        },
+                        "statusCode": {
+                          "example": 404
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "example": "API:RATE_LIMITED"
+                        },
+                        "message": {
+                          "example": "Rate limit exceeded. Upgrade your plan for higher limits."
+                        },
+                        "statusCode": {
+                          "example": 429
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/ApiResponse"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "example": "SYSTEM:INTERNAL_SERVER_ERROR"
+                        },
+                        "message": {
+                          "example": "An internal server error occurred"
+                        },
+                        "statusCode": {
+                          "example": 500
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "meta"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the operation was successful"
+          },
+          "data": {
+            "description": "The actual data payload for successful responses"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "timestamp",
+              "traceId",
+              "service",
+              "method"
+            ],
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO 8601 timestamp of when the response was generated"
+              },
+              "traceId": {
+                "type": "string",
+                "description": "Trace ID for the request"
+              },
+              "executionTime": {
+                "type": "number",
+                "description": "Time taken to process the request in milliseconds"
+              },
+              "service": {
+                "type": "string",
+                "description": "Service name that handled the request"
+              },
+              "method": {
+                "type": "string",
+                "description": "Method name that handled the request"
+              }
+            }
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "context",
+          "statusCode",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine-readable error code",
+            "example": "VALIDATION:INVALID_INPUT"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "details": {
+            "type": "string",
+            "description": "Optional, more specific details about the error"
+          },
+          "context": {
+            "$ref": "#/components/schemas/ErrorContext"
+          },
+          "statusCode": {
+            "type": "integer",
+            "description": "HTTP status code"
+          },
+          "retryable": {
+            "type": "boolean",
+            "description": "Indicates if the operation can be retried"
+          }
+        }
+      },
+      "ErrorContext": {
+        "type": "object",
+        "required": [
+          "service",
+          "method"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "traceId": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "validationErrors": {
+            "type": "object"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "KeyValue": {
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "The key/value identifier"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label"
+          }
+        }
+      },
+      "Station": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Station code",
+            "example": "NDLS"
+          },
+          "name": {
+            "type": "string",
+            "description": "Station name",
+            "example": "New Delhi"
+          },
+          "nameHindi": {
+            "type": "string",
+            "description": "Station name in Hindi"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "description": "Station latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "description": "Station longitude"
+          }
+        }
+      },
+      "TrainInfo": {
+        "type": "object",
+        "required": [
+          "number",
+          "name",
+          "type",
+          "source",
+          "destination"
+        ],
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "Train number",
+            "example": "12301"
+          },
+          "name": {
+            "type": "string",
+            "description": "Train name",
+            "example": "Rajdhani Express"
+          },
+          "type": {
+            "type": "string",
+            "description": "Train type",
+            "example": "RAJ"
+          },
+          "nameHindi": {
+            "type": "string",
+            "description": "Train name in Hindi"
+          },
+          "typeDescription": {
+            "type": "string",
+            "description": "Train type description"
+          },
+          "typeDescriptionHindi": {
+            "type": "string",
+            "description": "Train type description in Hindi"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Station"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/Station"
+          }
+        }
+      },
+      "TrainSearchResult": {
+        "type": "object",
+        "required": [
+          "trainNumber",
+          "trainName",
+          "sourceStationCode",
+          "destinationStationCode"
+        ],
+        "properties": {
+          "trainNumber": {
+            "type": "string",
+            "example": "12301"
+          },
+          "trainName": {
+            "type": "string",
+            "example": "Rajdhani Express"
+          },
+          "sourceStationCode": {
+            "type": "string",
+            "example": "NDLS"
+          },
+          "destinationStationCode": {
+            "type": "string",
+            "example": "HWH"
+          }
+        }
+      },
+      "JourneyInstance": {
+        "type": "object",
+        "required": [
+          "startDate",
+          "departureTimestamp",
+          "status",
+          "positionSummary"
+        ],
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Journey start date in YYYY-MM-DD format"
+          },
+          "departureTimestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Departure timestamp"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "RUNNING",
+              "NOT_RUNNING",
+              "UNKNOWN"
+            ],
+            "description": "Journey status"
+          },
+          "positionSummary": {
+            "type": "string",
+            "description": "Current position summary"
+          },
+          "exceptionMessage": {
+            "type": "string",
+            "description": "Exception message if any"
+          }
+        }
+      },
+      "RailRadarStationStop": {
+        "type": "object",
+        "properties": {
+          "stationCode": {
+            "type": "string"
+          },
+          "stationName": {
+            "type": "string"
+          },
+          "arrivalMinutes": {
+            "type": "integer"
+          },
+          "departureMinutes": {
+            "type": "integer"
+          },
+          "haltDurationMinutes": {
+            "type": "integer"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "day": {
+            "type": "integer"
+          },
+          "distanceFromSourceKm": {
+            "type": "number"
+          },
+          "speedOnSectionKmph": {
+            "type": "number"
+          },
+          "trackType": {
+            "type": "string"
+          }
+        }
+      },
+      "RailRadarPositionInfo": {
+        "type": "object",
+        "properties": {
+          "previousStation": {
+            "$ref": "#/components/schemas/RailRadarStationStop"
+          },
+          "nextStation": {
+            "$ref": "#/components/schemas/RailRadarStationStop"
+          },
+          "isHalted": {
+            "type": "boolean"
+          },
+          "currentStation": {
+            "$ref": "#/components/schemas/RailRadarStationStop"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "distanceCoveredFromPrevStationKm": {
+            "type": "number"
+          },
+          "distanceToNextStationKm": {
+            "type": "number"
+          },
+          "percentageCovered": {
+            "type": "number"
+          },
+          "speedOnSectionKmph": {
+            "type": "number"
+          },
+          "trackType": {
+            "type": "string"
+          }
+        }
+      },
+      "RailRadarJourneyInfo": {
+        "type": "object",
+        "properties": {
+          "sourceStation": {
+            "$ref": "#/components/schemas/RailRadarStationStop"
+          },
+          "destinationStation": {
+            "$ref": "#/components/schemas/RailRadarStationStop"
+          }
+        }
+      },
+      "RailRadarRunningJourneyInstance": {
+        "type": "object",
+        "properties": {
+          "journeyDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "RUNNING"
+            ]
+          },
+          "position": {
+            "$ref": "#/components/schemas/RailRadarPositionInfo"
+          }
+        }
+      },
+      "RailRadarNonRunningJourneyInstance": {
+        "type": "object",
+        "properties": {
+          "journeyDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UPCOMING",
+              "ARRIVED"
+            ]
+          },
+          "journeyInfo": {
+            "$ref": "#/components/schemas/RailRadarJourneyInfo"
+          }
+        }
+      },
+      "RailRadarTrainJourneyInstance": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RailRadarRunningJourneyInstance"
+          },
+          {
+            "$ref": "#/components/schemas/RailRadarNonRunningJourneyInstance"
+          }
+        ]
+      },
+      "ScheduledRouteStop": {
+        "type": "object",
+        "required": [
+          "stopNumber",
+          "station",
+          "distanceKilometers",
+          "journeyDay",
+          "isLocoReversal",
+          "runDays",
+          "schedule"
+        ],
+        "properties": {
+          "stopNumber": {
+            "type": "integer",
+            "description": "Stop sequence number"
+          },
+          "station": {
+            "$ref": "#/components/schemas/Station"
+          },
+          "distanceKilometers": {
+            "type": "number",
+            "description": "Distance from origin in kilometers"
+          },
+          "journeyDay": {
+            "type": "integer",
+            "description": "Journey day number"
+          },
+          "isLocoReversal": {
+            "type": "boolean",
+            "description": "Whether locomotive reversal occurs at this station"
+          },
+          "runDays": {
+            "type": "string",
+            "description": "Days when train runs"
+          },
+          "schedule": {
+            "type": "object",
+            "required": [
+              "arrival",
+              "departure",
+              "haltMinutes"
+            ],
+            "properties": {
+              "arrival": {
+                "type": "string",
+                "description": "Scheduled arrival time"
+              },
+              "departure": {
+                "type": "string",
+                "description": "Scheduled departure time"
+              },
+              "haltMinutes": {
+                "type": "integer",
+                "description": "Halt duration in minutes"
+              }
+            }
+          }
+        }
+      },
+      "TrainScheduleResult": {
+        "type": "object",
+        "required": [
+          "train",
+          "travelTime",
+          "runDays",
+          "availableClasses",
+          "validFrom",
+          "isReserved",
+          "availableStartDates",
+          "route"
+        ],
+        "properties": {
+          "train": {
+            "$ref": "#/components/schemas/TrainInfo"
+          },
+          "travelTime": {
+            "type": "string",
+            "description": "Total travel time"
+          },
+          "runDays": {
+            "type": "string",
+            "description": "Days when train runs"
+          },
+          "availableClasses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Available travel classes"
+          },
+          "validFrom": {
+            "type": "string",
+            "description": "Schedule valid from date"
+          },
+          "isReserved": {
+            "type": "boolean",
+            "description": "Whether reservation is required"
+          },
+          "availableStartDates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Available journey start dates"
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledRouteStop"
+            }
+          }
+        }
+      },
+      "StationAverageDelay": {
+        "type": "object",
+        "required": [
+          "station",
+          "averageArrivalDelayMinutes",
+          "averageDepartureDelayMinutes"
+        ],
+        "properties": {
+          "station": {
+            "$ref": "#/components/schemas/Station"
+          },
+          "averageArrivalDelayMinutes": {
+            "type": "number",
+            "description": "Average arrival delay in minutes"
+          },
+          "averageDepartureDelayMinutes": {
+            "type": "number",
+            "description": "Average departure delay in minutes"
+          }
+        }
+      },
+      "AverageDelayResult": {
+        "type": "object",
+        "required": [
+          "train",
+          "runDays",
+          "stationDelays"
+        ],
+        "properties": {
+          "train": {
+            "$ref": "#/components/schemas/TrainInfo"
+          },
+          "runDays": {
+            "type": "string",
+            "description": "Days when train runs"
+          },
+          "stationDelays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StationAverageDelay"
+            }
+          }
+        }
+      },
+      "StationSchedule": {
+        "type": "object",
+        "properties": {
+          "arrivalMinutes": {
+            "type": "integer"
+          },
+          "departureMinutes": {
+            "type": "integer"
+          },
+          "day": {
+            "type": "integer"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "distanceFromSourceKm": {
+            "type": "number"
+          }
+        }
+      },
+      "TrainWithIntermediateStops": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TrainSearchResult"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "fromStationSchedule": {
+                "$ref": "#/components/schemas/StationSchedule"
+              },
+              "toStationSchedule": {
+                "$ref": "#/components/schemas/StationSchedule"
+              }
+            }
+          }
+        ]
+      },
+      "LiveTrainMapData": {
+        "type": "object",
+        "required": [
+          "train_number",
+          "train_name",
+          "type",
+          "current_station",
+          "current_station_name",
+          "current_lat",
+          "current_lng",
+          "departure_minutes",
+          "current_day",
+          "next_station",
+          "next_station_name",
+          "next_lat",
+          "next_lng",
+          "next_arrival_minutes",
+          "next_day",
+          "distance_from_source_km",
+          "next_distance",
+          "is_halt"
+        ],
+        "properties": {
+          "train_number": {
+            "type": "string",
+            "description": "Train number"
+          },
+          "train_name": {
+            "type": "string",
+            "description": "Train name"
+          },
+          "type": {
+            "type": "string",
+            "description": "Train type"
+          },
+          "current_station": {
+            "type": "string",
+            "description": "Current station code"
+          },
+          "current_station_name": {
+            "type": "string",
+            "description": "Current station name"
+          },
+          "current_lat": {
+            "type": "number",
+            "format": "double",
+            "description": "Current station latitude"
+          },
+          "current_lng": {
+            "type": "number",
+            "format": "double",
+            "description": "Current station longitude"
+          },
+          "departure_minutes": {
+            "type": "integer",
+            "description": "Departure time in minutes from midnight"
+          },
+          "current_day": {
+            "type": "integer",
+            "description": "Current journey day"
+          },
+          "next_station": {
+            "type": "string",
+            "description": "Next station code"
+          },
+          "next_station_name": {
+            "type": "string",
+            "description": "Next station name"
+          },
+          "next_lat": {
+            "type": "number",
+            "format": "double",
+            "description": "Next station latitude"
+          },
+          "next_lng": {
+            "type": "number",
+            "format": "double",
+            "description": "Next station longitude"
+          },
+          "next_arrival_minutes": {
+            "type": "integer",
+            "description": "Next station arrival time in minutes from midnight"
+          },
+          "next_day": {
+            "type": "integer",
+            "description": "Next station journey day"
+          },
+          "distance_from_source_km": {
+            "type": "number",
+            "description": "Distance from source station in kilometers"
+          },
+          "next_distance": {
+            "type": "number",
+            "description": "Distance to next station in kilometers"
+          },
+          "is_halt": {
+            "type": "integer",
+            "description": "Whether current station is a halt (1) or not (0)"
+          }
+        }
+      },
+      "LiveStationBoardTrain": {
+        "type": "object",
+        "required": [
+          "train",
+          "journeyDate",
+          "schedule",
+          "live",
+          "status",
+          "coachInfo"
+        ],
+        "properties": {
+          "train": {
+            "$ref": "#/components/schemas/TrainInfo"
+          },
+          "platform": {
+            "type": "string",
+            "description": "Platform number"
+          },
+          "journeyDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Journey date"
+          },
+          "schedule": {
+            "type": "object",
+            "properties": {
+              "arrival": {
+                "type": "string",
+                "description": "Scheduled arrival time"
+              },
+              "departure": {
+                "type": "string",
+                "description": "Scheduled departure time"
+              }
+            }
+          },
+          "live": {
+            "type": "object",
+            "properties": {
+              "expectedArrival": {
+                "type": "string",
+                "description": "Expected arrival time"
+              },
+              "expectedDeparture": {
+                "type": "string",
+                "description": "Expected departure time"
+              },
+              "arrivalDelayDisplay": {
+                "type": "string",
+                "description": "Arrival delay display"
+              },
+              "departureDelayDisplay": {
+                "type": "string",
+                "description": "Departure delay display"
+              }
+            }
+          },
+          "status": {
+            "type": "object",
+            "required": [
+              "isCancelled",
+              "isDiverted",
+              "isArrivalCancelled",
+              "isDepartureCancelled",
+              "hasArrived",
+              "hasDeparted",
+              "isDestinationChanged",
+              "isSourceChanged"
+            ],
+            "properties": {
+              "isCancelled": {
+                "type": "boolean"
+              },
+              "isDiverted": {
+                "type": "boolean"
+              },
+              "isArrivalCancelled": {
+                "type": "boolean"
+              },
+              "isDepartureCancelled": {
+                "type": "boolean"
+              },
+              "hasArrived": {
+                "type": "boolean"
+              },
+              "hasDeparted": {
+                "type": "boolean"
+              },
+              "isDestinationChanged": {
+                "type": "boolean"
+              },
+              "isSourceChanged": {
+                "type": "boolean"
+              }
+            }
+          },
+          "coachInfo": {
+            "type": "object",
+            "properties": {
+              "arrivalCoachPosition": {
+                "type": "string"
+              },
+              "departureCoachPosition": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "LiveStationBoardResult": {
+        "type": "object",
+        "required": [
+          "station",
+          "queryingForNextHours",
+          "totalTrains",
+          "trains"
+        ],
+        "properties": {
+          "station": {
+            "$ref": "#/components/schemas/Station"
+          },
+          "queryingForNextHours": {
+            "type": "integer",
+            "description": "Number of hours queried"
+          },
+          "totalTrains": {
+            "type": "integer",
+            "description": "Total number of trains"
+          },
+          "trains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiveStationBoardTrain"
+            }
+          }
+        }
+      },
+      "Train": {
+        "type": "object",
+        "required": [
+          "trainNumber",
+          "trainName",
+          "sourceStationCode",
+          "destinationStationCode",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "trainNumber": {
+            "type": "string",
+            "description": "Train number",
+            "example": "12301"
+          },
+          "trainName": {
+            "type": "string",
+            "description": "Train name",
+            "example": "Howrah Rajdhani Express"
+          },
+          "hindiName": {
+            "type": "string",
+            "description": "Train name in Hindi"
+          },
+          "type": {
+            "type": "string",
+            "description": "Train type"
+          },
+          "zone": {
+            "type": "string",
+            "description": "Railway zone"
+          },
+          "sourceStationCode": {
+            "type": "string",
+            "description": "Source station code",
+            "example": "NDLS"
+          },
+          "sourceStationName": {
+            "type": "string",
+            "description": "Source station name",
+            "example": "New Delhi"
+          },
+          "destinationStationCode": {
+            "type": "string",
+            "description": "Destination station code",
+            "example": "HWH"
+          },
+          "destinationStationName": {
+            "type": "string",
+            "description": "Destination station name",
+            "example": "Howrah Junction"
+          },
+          "runningDaysBitmap": {
+            "type": "integer",
+            "description": "Bitmap representing running days. Each bit corresponds to a day of the week (0=Sunday, 1=Monday, ..., 6=Saturday). For example, 1 (binary 0000001) means Sunday only, and 127 (binary 1111111) means daily.\n"
+          },
+          "returnTrainNumber": {
+            "type": "string",
+            "description": "Return train number"
+          },
+          "travelTimeMinutes": {
+            "type": "integer",
+            "description": "Total travel time in minutes"
+          },
+          "totalHalts": {
+            "type": "integer",
+            "description": "Total number of halts"
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Total distance in kilometers"
+          },
+          "avgSpeedKmph": {
+            "type": "number",
+            "description": "Average speed in km/h"
+          },
+          "rakeDetails": {
+            "type": "string",
+            "description": "Rake details"
+          },
+          "otherDetails": {
+            "type": "string",
+            "description": "Other details"
+          },
+          "news": {
+            "type": "string",
+            "description": "News about the train"
+          },
+          "images": {
+            "type": "string",
+            "description": "Train images"
+          },
+          "scrapedAt": {
+            "type": "integer",
+            "description": "Data scraping timestamp"
+          },
+          "sourceUrl": {
+            "type": "string",
+            "description": "Source URL"
+          },
+          "createdAt": {
+            "type": "integer",
+            "description": "Creation timestamp"
+          },
+          "updatedAt": {
+            "type": "integer",
+            "description": "Last update timestamp"
+          }
+        }
+      },
+      "TrainStop": {
+        "type": "object",
+        "required": [
+          "id",
+          "sequence",
+          "stationCode",
+          "scheduledArrival",
+          "scheduledDeparture"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Stop ID"
+          },
+          "sequence": {
+            "type": "integer",
+            "description": "Stop sequence number"
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "Station code"
+          },
+          "stationName": {
+            "type": "string",
+            "description": "Station name"
+          },
+          "isHalt": {
+            "type": "integer",
+            "description": "Whether this is a halt (1) or not (0)"
+          },
+          "scheduledArrival": {
+            "type": "integer",
+            "description": "Scheduled arrival time"
+          },
+          "scheduledDeparture": {
+            "type": "integer",
+            "description": "Scheduled departure time"
+          },
+          "haltDurationMinutes": {
+            "type": "integer",
+            "description": "Halt duration in minutes"
+          },
+          "platform": {
+            "type": "string",
+            "description": "Platform number"
+          },
+          "day": {
+            "type": "integer",
+            "description": "Journey day"
+          },
+          "distanceFromSourceKm": {
+            "type": "number",
+            "description": "Distance from source in km"
+          },
+          "speedOnSectionKmph": {
+            "type": "number",
+            "description": "Speed on this section in km/h"
+          },
+          "trackType": {
+            "type": "string",
+            "description": "Track type"
+          },
+          "actualArrivalTime": {
+            "type": "integer",
+            "description": "Actual arrival timestamp"
+          },
+          "actualDepartureTime": {
+            "type": "integer",
+            "description": "Actual departure timestamp"
+          },
+          "arrivalDelaySeconds": {
+            "type": "integer",
+            "description": "Arrival delay in seconds"
+          },
+          "departureDelaySeconds": {
+            "type": "integer",
+            "description": "Departure delay in seconds"
+          },
+          "livePlatform": {
+            "type": "string",
+            "description": "Live platform information"
+          },
+          "liveDistanceKm": {
+            "type": "number",
+            "description": "Live distance information"
+          }
+        }
+      },
+      "TrainCrossing": {
+        "type": "object",
+        "required": [
+          "id",
+          "stationCode",
+          "sequence",
+          "eventType"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Crossing ID"
+          },
+          "stationCode": {
+            "type": "string",
+            "description": "Station code where crossing occurs"
+          },
+          "sequence": {
+            "type": "integer",
+            "description": "Sequence number"
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Type of crossing event"
+          },
+          "runningDaysBitmap": {
+            "type": "integer",
+            "description": "Running days bitmap"
+          },
+          "crossedTrainNumber": {
+            "type": "string",
+            "description": "Number of crossed train"
+          },
+          "crossedTrainName": {
+            "type": "string",
+            "description": "Name of crossed train"
+          },
+          "crossedTrainLink": {
+            "type": "string",
+            "description": "Link to crossed train"
+          }
+        }
+      },
+      "LiveTrainStatusStop": {
+        "type": "object",
+        "required": [
+          "station"
+        ],
+        "properties": {
+          "station": {
+            "$ref": "#/components/schemas/Station"
+          },
+          "scheduledArrival": {
+            "type": "integer",
+            "description": "Scheduled arrival timestamp"
+          },
+          "scheduledDeparture": {
+            "type": "integer",
+            "description": "Scheduled departure timestamp"
+          },
+          "actualArrival": {
+            "type": "integer",
+            "description": "Actual arrival timestamp"
+          },
+          "actualDeparture": {
+            "type": "integer",
+            "description": "Actual departure timestamp"
+          },
+          "delayArrivalMinutes": {
+            "type": "integer",
+            "description": "Arrival delay in minutes"
+          },
+          "delayDepartureMinutes": {
+            "type": "integer",
+            "description": "Departure delay in minutes"
+          },
+          "platform": {
+            "type": "string",
+            "description": "Platform number"
+          },
+          "distanceFromOriginKm": {
+            "type": "number",
+            "description": "Distance from origin in km"
+          },
+          "journeyDay": {
+            "type": "integer",
+            "description": "Journey day"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ARRIVED",
+              "DEPARTED",
+              "CANCELLED",
+              "AT_STATION",
+              "UNKNOWN"
+            ],
+            "description": "Stop status"
+          }
+        }
+      },
+      "LiveTrainStatus": {
+        "type": "object",
+        "required": [
+          "trainNumber",
+          "journeyDate",
+          "statusSummary",
+          "dataSource",
+          "route"
+        ],
+        "properties": {
+          "trainNumber": {
+            "type": "string",
+            "description": "Train number"
+          },
+          "trainName": {
+            "type": "string",
+            "description": "Train name"
+          },
+          "journeyDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Journey date"
+          },
+          "lastUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp"
+          },
+          "currentLocation": {
+            "type": "object",
+            "properties": {
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "stationCode": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ARRIVED",
+                  "DEPARTED",
+                  "CANCELLED",
+                  "AT_STATION",
+                  "UNKNOWN"
+                ]
+              },
+              "distanceFromOriginKm": {
+                "type": "number"
+              },
+              "distanceFromLastStationKm": {
+                "type": "number"
+              }
+            }
+          },
+          "overallDelayMinutes": {
+            "type": "integer",
+            "description": "Overall delay in minutes"
+          },
+          "dataSource": {
+            "type": "string",
+            "description": "Data source"
+          },
+          "statusSummary": {
+            "type": "string",
+            "description": "Human-readable status summary"
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LiveTrainStatusStop"
+            }
+          }
+        }
+      },
+      "TrainData": {
+        "type": "object",
+        "required": [
+          "train",
+          "route",
+          "crossings",
+          "metadata"
+        ],
+        "properties": {
+          "train": {
+            "$ref": "#/components/schemas/Train"
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrainStop"
+            }
+          },
+          "crossings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrainCrossing"
+            }
+          },
+          "liveData": {
+            "$ref": "#/components/schemas/LiveTrainStatus"
+          },
+          "statusSummary": {
+            "type": "string",
+            "description": "Human-readable status summary"
+          },
+          "liveDataError": {
+            "$ref": "#/components/schemas/ApiError"
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "hasLiveData",
+              "lastStaticUpdate",
+              "canRefreshLive",
+              "journeyStatus"
+            ],
+            "properties": {
+              "hasLiveData": {
+                "type": "boolean",
+                "description": "Whether live data is available"
+              },
+              "lastStaticUpdate": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Last static data update"
+              },
+              "lastLiveUpdate": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Last live data update"
+              },
+              "canRefreshLive": {
+                "type": "boolean",
+                "description": "Whether live data can be refreshed"
+              },
+              "journeyStatus": {
+                "type": "object",
+                "description": "Journey status information"
+              }
+            }
+          }
+        }
+      },
+      "IncrementalRefreshResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the operation was successful"
+          },
+          "message": {
+            "type": "string",
+            "description": "A human-readable message about the refresh operation"
+          },
+          "processedTrains": {
+            "type": "integer",
+            "description": "Number of trains processed during the refresh"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of errors encountered during the refresh"
+          }
+        }
+      },
+      "TrainListItem": {
+        "type": "object",
+        "required": [
+          "train_number",
+          "train_name",
+          "type",
+          "zone",
+          "source_station_code",
+          "destination_station_code",
+          "distance_km",
+          "avg_speed_kmph"
+        ],
+        "properties": {
+          "train_number": {
+            "type": "string",
+            "description": "Train number",
+            "example": "12301"
+          },
+          "train_name": {
+            "type": "string",
+            "description": "Train name",
+            "example": "Howrah Rajdhani Express"
+          },
+          "type": {
+            "type": "string",
+            "description": "Train type",
+            "example": "RAJ"
+          },
+          "zone": {
+            "type": "string",
+            "description": "Railway zone",
+            "example": "ER"
+          },
+          "source_station_code": {
+            "type": "string",
+            "description": "Source station code",
+            "example": "NDLS"
+          },
+          "destination_station_code": {
+            "type": "string",
+            "description": "Destination station code",
+            "example": "HWH"
+          },
+          "distance_km": {
+            "type": "number",
+            "description": "Total distance in kilometers",
+            "example": 1447
+          },
+          "avg_speed_kmph": {
+            "type": "number",
+            "description": "Average speed in km/h",
+            "example": 83.5
+          }
+        }
+      },
+      "TrainListPagination": {
+        "type": "object",
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages",
+          "hasNext",
+          "hasPrev"
+        ],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Current page number",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 50
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of items",
+            "example": 15000
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 300
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": false
+          }
+        }
+      },
+      "TrainListFilters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Applied train type filter",
+            "example": "Express"
+          },
+          "zone": {
+            "type": "string",
+            "description": "Applied railway zone filter",
+            "example": "WR"
+          },
+          "search": {
+            "type": "string",
+            "description": "Applied search query",
+            "example": "rajdhani"
+          }
+        }
+      },
+      "TrainListResponse": {
+        "type": "object",
+        "required": [
+          "trains",
+          "pagination",
+          "filters"
+        ],
+        "properties": {
+          "trains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrainListItem"
+            },
+            "description": "Array of train items for current page"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/TrainListPagination"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/TrainListFilters"
+          }
+        }
+      },
+      "ResourceItem": {
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Resource value/identifier",
+            "example": "Express"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label",
+            "example": "Express"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of items with this resource value",
+            "example": 1250
+          }
+        }
+      },
+      "ResourcesResponse": {
+        "type": "object",
+        "properties": {
+          "trainTypes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceItem"
+            },
+            "description": "Available train types with counts"
+          },
+          "trainZones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceItem"
+            },
+            "description": "Available railway zones with counts"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Trains",
+      "description": "Train-related operations including schedules, live tracking, search, and listings"
+    },
+    {
+      "name": "Resources",
+      "description": "Resource information like train types and railway zones"
+    },
+    {
+      "name": "Stations",
+      "description": "Station-related operations including information and live boards"
+    },
+    {
+      "name": "Search",
+      "description": "Search operations for trains and stations"
+    },
+    {
+      "name": "Internal",
+      "description": "Internal/cron operations (no authentication required)"
+    },
+    {
+      "name": "Documentation",
+      "description": "API documentation and specifications"
+    }
+  ]
+}
